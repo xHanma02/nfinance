@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="uk" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Скарб — Особисті фінанси</title>
+    
+    <!-- Шрифт Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js для графіків -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased transition-colors duration-200 selection:bg-brand-500 selection:text-white">
+
+    <!-- Контейнер сповіщень (Toast) замість alert() -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Головна обгортка застосунку -->
+    <div class="min-h-screen flex flex-col lg:flex-row">
+        
+        <!-- Бічна панель навігації (Desktop) -->
+        <aside class="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-30">
+            <!-- Логотип -->
+            <div class="flex items-center gap-3 px-6 h-20 border-b border-slate-100 dark:border-slate-800/80">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                    <i data-lucide="wallet" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-brand-600 to-purple-600 dark:from-brand-400 dark:to-purple-400 bg-clip-text text-transparent">Скарб</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Твої фінанси під контролем</p>
+                </div>
+            </div>
+
+            <!-- Навігаційне меню -->
+            <nav class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+                <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl transition-all bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    Огляд та аналітика
+                </button>
+                <button onclick="switchTab('transactions')" data-tab="transactions" class="nav-btn w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-all">
+                    <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+                    Історія операцій
+                </button>
+                <button onclick="switchTab('accounts')" data-tab="accounts" class="nav-btn w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-all">
+                    <i data-lucide="credit-card" class="w-5 h-5"></i>
+                    Рахунки та гаманці
+                </button>
+                <button onclick="switchTab('budget')" data-tab="budget" class="nav-btn w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-all">
+                    <i data-lucide="target" class="w-5 h-5"></i>
+                    Бюджет і категорії
+                </button>
+                <button onclick="switchTab('settings')" data-tab="settings" class="nav-btn w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-all">
+                    <i data-lucide="database" class="w-5 h-5"></i>
+                    Дані та резервні копії
+                </button>
+            </nav>
+
+            <!-- Кнопка швидкого додавання в сайдбарі -->
+            <div class="p-4 border-t border-slate-100 dark:border-slate-800">
+                <button onclick="openTransactionModal()" class="w-full py-3 px-4 bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-semibold rounded-xl shadow-lg shadow-brand-600/25 flex items-center justify-center gap-2 transition-all">
+                    <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                    Додати операцію
+                </button>
+            </div>
+        </aside>
+
+        <!-- Основна контентна частина -->
+        <div class="flex-1 lg:pl-72 flex flex-col min-h-screen pb-24 lg:pb-8">
+            
+            <!-- Верхня шапка (Header) -->
+            <header class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-8 h-16 sm:h-20 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <!-- Мобільний логотип -->
+                    <div class="lg:hidden w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+                        <i data-lucide="wallet" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 id="page-title" class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Огляд та аналітика</h2>
+                        <p id="current-month-display" class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block"></p>
+                    </div>
+                </div>
+
+                <!-- Праві дії в хедері -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Вибір місяця для статистики -->
+                    <div class="relative">
+                        <input type="month" id="global-month-picker" onchange="handleMonthChange(this.value)" class="px-3 py-2 text-xs sm:text-sm font-medium bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-700 dark:text-slate-200 cursor-pointer">
+                    </div>
+
+                    <!-- Кнопка переказу між рахунками -->
+                    <button onclick="openTransferModal()" title="Переказ між рахунками" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        <i data-lucide="repeat" class="w-5 h-5"></i>
+                    </button>
+
+                    <!-- Перемикач світлої/темної теми -->
+                    <button onclick="toggleTheme()" title="Змінити тему" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        <i data-lucide="moon" id="theme-icon-dark" class="w-5 h-5 hidden dark:block text-amber-400"></i>
+                        <i data-lucide="sun" id="theme-icon-light" class="w-5 h-5 block dark:hidden text-slate-700"></i>
+                    </button>
+
+                    <!-- Кнопка додавання операції (Mobile/Tablet) -->
+                    <button onclick="openTransactionModal()" class="lg:hidden py-2 px-3 sm:px-4 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-md shadow-brand-600/20 flex items-center gap-1.5">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Додати</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Контейнер для вкладок -->
+            <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 pt-6 space-y-6">
+
+                <!-- Баннер демо-даних (показується, якщо активні демо-дані) -->
+                <div id="demo-banner" class="hidden bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
+                            <i data-lucide="sparkles" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-amber-900 dark:text-amber-200">Ви переглядаєте демонстраційні дані</p>
+                            <p class="text-xs text-amber-700 dark:text-amber-400">Це приклади рахунків та транзакцій, щоб ви могли одразу оцінити графіки й аналітику.</p>
+                        </div>
+                    </div>
+                    <button onclick="clearDemoData()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl transition-colors shrink-0">
+                        Очистити демо-дані
+                    </button>
+                </div>
+
+                <!-- ==================== ВКЛАДКА 1: ОГЛЯД ТА АНАЛІТИКА ==================== -->
+                <section id="tab-dashboard" class="tab-content space-y-6">
+                    
+                    <!-- Картки ключових показників -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                        <!-- Загальний баланс -->
+                        <div class="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-brand-950 dark:to-slate-900 text-white rounded-2xl p-5 shadow-lg border border-slate-800 dark:border-brand-800/40 relative overflow-hidden">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-medium uppercase tracking-wider text-slate-300">Загальний баланс</span>
+                                <div class="p-2 bg-white/10 rounded-xl">
+                                    <i data-lucide="landmark" class="w-4 h-4 text-brand-300"></i>
+                                </div>
+                            </div>
+                            <div id="kpi-total-balance" class="text-2xl sm:text-3xl font-extrabold tracking-tight">0 ₴</div>
+                            <p id="kpi-accounts-count" class="text-xs text-slate-400 mt-2">На 0 рахунках</p>
+                        </div>
+
+                        <!-- Доходи за місяць -->
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Доходи за місяць</span>
+                                <div class="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400">
+                                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div id="kpi-month-income" class="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">+0 ₴</div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Усі надходження за обраний період</p>
+                        </div>
+
+                        <!-- Витрати за місяць -->
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Витрати за місяць</span>
+                                <div class="p-2 bg-rose-50 dark:bg-rose-500/10 rounded-xl text-rose-600 dark:text-rose-400">
+                                    <i data-lucide="trending-down" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div id="kpi-month-expense" class="text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400">-0 ₴</div>
+                            <p id="kpi-month-savings" class="text-xs text-slate-500 dark:text-slate-400 mt-2">Залишок місяця: 0 ₴</p>
+                        </div>
+
+                        <!-- Місячний бюджет -->
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ліміт витрат</span>
+                                    <button onclick="switchTab('budget')" class="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline">Налаштувати</button>
+                                </div>
+                                <div class="flex items-baseline justify-between">
+                                    <span id="kpi-budget-spent" class="text-xl font-bold text-slate-900 dark:text-white">0 ₴</span>
+                                    <span id="kpi-budget-limit" class="text-xs font-medium text-slate-500 dark:text-slate-400">з 0 ₴</span>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div id="kpi-budget-bar" class="h-full bg-brand-600 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                                <p id="kpi-budget-status" class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Ліміт не встановлено</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Швидкий огляд рахунків -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Мої рахунки</h3>
+                            <button onclick="switchTab('accounts')" class="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+                                Усі рахунки <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        <div id="dashboard-accounts-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <!-- Рендериться через JS -->
+                        </div>
+                    </div>
+
+                    <!-- Графіки -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- Стовпчикова діаграма: Доходи та витрати за 6 місяців -->
+                        <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-900 dark:text-white">Динаміка доходів та витрат</h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Порівняння за останні 6 місяців</p>
+                                </div>
+                            </div>
+                            <div class="relative h-64 sm:h-72 w-full">
+                                <canvas id="cashflowChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Кільцева діаграма: Структура витрат -->
+                        <div class="lg:col-span-5 bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-col">
+                            <div class="mb-4">
+                                <h3 class="text-base font-bold text-slate-900 dark:text-white">Витрати за категоріями</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Розподіл за обраний місяць</p>
+                            </div>
+                            <div class="relative h-56 w-full flex items-center justify-center">
+                                <canvas id="expensesDonutChart"></canvas>
+                                <div id="donut-empty-state" class="hidden absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                                    <i data-lucide="pie-chart" class="w-10 h-10 mb-2 opacity-40"></i>
+                                    <p class="text-xs">Немає витрат за цей місяць</p>
+                                </div>
+                            </div>
+                            <div id="donut-legend" class="mt-4 space-y-2 max-h-36 overflow-y-auto pr-1">
+                                <!-- Топ категорій -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Останні операції -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-bold text-slate-900 dark:text-white">Останні операції</h3>
+                            <button onclick="switchTab('transactions')" class="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+                                Уся історія <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        <div id="recent-transactions-list" class="divide-y divide-slate-100 dark:divide-slate-800">
+                            <!-- Рендериться через JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== ВКЛАДКА 2: ІСТОРІЯ ОПЕРАЦІЙ ==================== -->
+                <section id="tab-transactions" class="tab-content hidden space-y-6">
+                    <!-- Панель фільтрів -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                            <!-- Пошук -->
+                            <div class="lg:col-span-2 relative">
+                                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                                <input type="text" id="filter-search" oninput="renderTransactions()" placeholder="Пошук за коментарем або категорією..." class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            </div>
+
+                            <!-- Тип операції -->
+                            <select id="filter-type" onchange="renderTransactions()" class="px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500">
+                                <option value="all">Усі типи операцій</option>
+                                <option value="expense">Тільки витрати</option>
+                                <option value="income">Тільки доходи</option>
+                                <option value="transfer">Перекази</option>
+                            </select>
+
+                            <!-- Категорія -->
+                            <select id="filter-category" onchange="renderTransactions()" class="px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500">
+                                <option value="all">Усі категорії</option>
+                            </select>
+
+                            <!-- Рахунок -->
+                            <select id="filter-account" onchange="renderTransactions()" class="px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500">
+                                <option value="all">Усі рахунки</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="filter-only-selected-month" onchange="renderTransactions()" class="rounded text-brand-600 focus:ring-brand-500">
+                                    Показувати тільки за обраний у шапці місяць
+                                </label>
+                            </div>
+                            <button onclick="resetFilters()" class="text-xs font-semibold text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400">
+                                Скинути фільтри
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Повний список операцій -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+                        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <span id="transactions-count-label" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Знайдено операцій: 0</span>
+                            <span id="transactions-sum-label" class="text-sm font-bold"></span>
+                        </div>
+                        <div id="all-transactions-list" class="divide-y divide-slate-100 dark:divide-slate-800">
+                            <!-- Рендериться через JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== ВКЛАДКА 3: РАХУНКИ ТА ГАМАНЦІ ==================== -->
+                <section id="tab-accounts" class="tab-content hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900 dark:text-white">Ваші рахунки та картки</h3>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Керуйте готівкою, банківськими картками та переказами між ними</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button onclick="openTransferModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-semibold rounded-xl flex items-center gap-2 transition-colors">
+                                <i data-lucide="repeat" class="w-4 h-4"></i>
+                                Переказ коштів
+                            </button>
+                            <button onclick="openAccountModal()" class="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-md shadow-brand-600/20 flex items-center gap-2 transition-colors">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                Новий рахунок
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="accounts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <!-- Рендериться через JS -->
+                    </div>
+                </section>
+
+                <!-- ==================== ВКЛАДКА 4: БЮДЖЕТ І КАТЕГОРІЇ ==================== -->
+                <section id="tab-budget" class="tab-content hidden space-y-6">
+                    
+                    <!-- Блок встановлення загального місячного бюджету -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div class="space-y-1 max-w-xl">
+                                <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <i data-lucide="target" class="w-5 h-5 text-brand-600"></i>
+                                    Місячний ліміт витрат
+                                </h3>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Встановіть комфортну суму витрат на місяць, щоб контролювати фінансові цілі та уникати зайвих покупок.</p>
+                            </div>
+                            <form onsubmit="saveMonthlyBudget(event)" class="flex items-center gap-3 w-full md:w-auto">
+                                <div class="relative flex-1 md:w-48">
+                                    <input type="number" id="monthly-budget-input" min="0" step="100" placeholder="Наприклад: 25000" class="w-full pl-4 pr-10 py-2.5 text-sm font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500">
+                                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₴</span>
+                                </div>
+                                <button type="submit" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-md transition-colors shrink-0">
+                                    Зберегти
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Детальний прогрес-бар бюджету -->
+                        <div id="budget-detail-box" class="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                            <!-- Рендериться через JS -->
+                        </div>
+                    </div>
+
+                    <!-- Управління категоріями -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Категорії витрат та доходів</h3>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Використовуйте стандартні категорії або створюйте власні з індивідуальними лімітами</p>
+                            </div>
+                            <button onclick="openCategoryModal()" class="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-md flex items-center gap-2 self-start sm:self-auto">
+                                <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                                Додати категорію
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Категорії витрат -->
+                            <div>
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-rose-500 mb-3">Категорії витрат</h4>
+                                <div id="expense-categories-list" class="space-y-2.5"></div>
+                            </div>
+                            <!-- Категорії доходів -->
+                            <div>
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-500 mb-3">Категорії доходів</h4>
+                                <div id="income-categories-list" class="space-y-2.5"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== ВКЛАДКА 5: ДАНІ ТА РЕЗЕРВНІ КОПІЇ ==================== -->
+                <section id="tab-settings" class="tab-content hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Експорт та Імпорт -->
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-4">
+                            <div class="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
+                                <i data-lucide="hard-drive-download" class="w-6 h-6"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-900 dark:text-white">Резервне копіювання (JSON)</h3>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Усі ваші фінансові записи автоматично зберігаються у пам'яті цього браузера. Ви також можете завантажити резервну копію файлом або перенести дані на інший пристрій.</p>
+                            
+                            <div class="pt-2 flex flex-wrap gap-3">
+                                <button onclick="exportDataJSON()" class="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl flex items-center gap-2 transition-colors">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                    Експортувати у JSON
+                                </button>
+                                
+                                <label class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-semibold rounded-xl flex items-center gap-2 cursor-pointer transition-colors">
+                                    <i data-lucide="upload" class="w-4 h-4"></i>
+                                    Імпортувати з JSON
+                                    <input type="file" accept=".json" onchange="importDataJSON(event)" class="hidden">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Управління станом бази -->
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-4">
+                            <div class="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                                <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-900 dark:text-white">Скидання та демонстраційні дані</h3>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Ви можете очистити всі записи, щоб почати облік з чистого аркуша, або завантажити демонстраційний набір даних для тестування.</p>
+                            
+                            <div class="pt-2 flex flex-wrap gap-3">
+                                <button onclick="loadDemoData(true)" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-semibold rounded-xl flex items-center gap-2 transition-colors">
+                                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                    Завантажити демо-дані
+                                </button>
+                                <button onclick="openResetConfirmModal()" class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-sm font-semibold rounded-xl flex items-center gap-2 transition-colors">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    Очистити всі дані
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+
+        <!-- Нижня панель навігації для мобільних пристроїв -->
+        <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-30 flex items-center justify-around py-2 px-1">
+            <button onclick="switchTab('dashboard')" data-tab="dashboard" class="mobile-nav-btn flex flex-col items-center gap-1 p-2 rounded-xl text-brand-600 dark:text-brand-400">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Огляд</span>
+            </button>
+            <button onclick="switchTab('transactions')" data-tab="transactions" class="mobile-nav-btn flex flex-col items-center gap-1 p-2 rounded-xl text-slate-500 dark:text-slate-400">
+                <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">Історія</span>
+            </button>
+            <button onclick="openTransactionModal()" class="flex items-center justify-center w-12 h-12 -mt-6 rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30 active:scale-95 transition-transform">
+                <i data-lucide="plus" class="w-6 h-6"></i>
+            </button>
+            <button onclick="switchTab('accounts')" data-tab="accounts" class="mobile-nav-btn flex flex-col items-center gap-1 p-2 rounded-xl text-slate-500 dark:text-slate-400">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">Рахунки</span>
+            </button>
+            <button onclick="switchTab('budget')" data-tab="budget" class="mobile-nav-btn flex flex-col items-center gap-1 p-2 rounded-xl text-slate-500 dark:text-slate-400">
+                <i data-lucide="target" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">Бюджет</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- ==================== МОДАЛЬНІ ВІКНА ==================== -->
+
+    <!-- 1. Модальне вікно додавання/редагування транзакції -->
+    <div id="transaction-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Нова операція</h3>
+                <button onclick="closeModal('transaction-modal')" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <form onsubmit="handleAddTransaction(event)" class="p-6 space-y-4">
+                <!-- Перемикач Витрата / Дохід -->
+                <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                    <button type="button" id="tx-type-expense" onclick="setTxType('expense')" class="py-2.5 text-sm font-bold rounded-xl bg-white dark:bg-slate-900 text-rose-600 shadow-sm transition-all">
+                        Витрата
+                    </button>
+                    <button type="button" id="tx-type-income" onclick="setTxType('income')" class="py-2.5 text-sm font-semibold rounded-xl text-slate-600 dark:text-slate-400 transition-all">
+                        Дохід
+                    </button>
+                </div>
+                <input type="hidden" id="tx-type" value="expense">
+
+                <!-- Сума -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Сума (₴)</label>
+                    <div class="relative">
+                        <input type="number" id="tx-amount" required min="0.01" step="0.01" placeholder="0.00" class="w-full pl-4 pr-10 py-3 text-2xl font-extrabold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-bold text-slate-400">₴</span>
+                    </div>
+                </div>
+
+                <!-- Категорія та Рахунок -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Категорія</label>
+                        <select id="tx-category" required class="w-full px-3.5 py-2.5 text-sm font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Рахунок</label>
+                        <select id="tx-account" required class="w-full px-3.5 py-2.5 text-sm font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"></select>
+                    </div>
+                </div>
+
+                <!-- Дата -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Дата</label>
+                    <input type="date" id="tx-date" required class="w-full px-3.5 py-2.5 text-sm font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <!-- Коментар -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Коментар (необов'язково)</label>
+                    <input type="text" id="tx-note" placeholder="Наприклад: Кава та круасан, Сільпо..." class="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-2xl shadow-lg shadow-brand-600/25 transition-all">
+                        Зберегти операцію
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Модальне вікно переказу між рахунками -->
+    <div id="transfer-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Переказ між рахунками</h3>
+                <button onclick="closeModal('transfer-modal')" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="handleTransfer(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">З рахунку</label>
+                    <select id="transfer-from" required class="w-full px-3.5 py-2.5 text-sm font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">На рахунок</label>
+                    <select id="transfer-to" required class="w-full px-3.5 py-2.5 text-sm font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Сума переказу (₴)</label>
+                    <input type="number" id="transfer-amount" required min="0.01" step="0.01" placeholder="0.00" class="w-full px-4 py-3 text-xl font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Дата</label>
+                    <input type="date" id="transfer-date" required class="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                </div>
+                <button type="submit" class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-2xl shadow-lg transition-all">
+                    Виконати переказ
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. Модальне вікно нового рахунку -->
+    <div id="account-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Додати рахунок</h3>
+                <button onclick="closeModal('account-modal')" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="handleAddAccount(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Назва рахунку</label>
+                    <input type="text" id="acc-name" required placeholder="Наприклад: Monobank, ПриватБанк, Готівка..." class="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Початковий баланс (₴)</label>
+                    <input type="number" id="acc-balance" required step="0.01" value="0" class="w-full px-3.5 py-2.5 text-sm font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Іконка та стиль</label>
+                    <select id="acc-icon" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                        <option value="💳">💳 Банківська картка</option>
+                        <option value="💵">💵 Готівка</option>
+                        <option value="🏦">🏦 Банківський рахунок / ФОП</option>
+                        <option value="🐷">🐷 Скарбничка / Заощадження</option>
+                        <option value="💎">💎 Валютний / Інвестиції</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-2xl shadow-lg transition-all">
+                    Створити рахунок
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. Модальне вікно нової категорії -->
+    <div id="category-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Нова категорія</h3>
+                <button onclick="closeModal('category-modal')" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="handleAddCategory(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Тип категорії</label>
+                    <select id="cat-type" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                        <option value="expense">Витрата</option>
+                        <option value="income">Дохід</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Іконка</label>
+                        <input type="text" id="cat-icon" required value="🛍️" maxlength="2" class="w-full px-3 py-2.5 text-center text-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                    </div>
+                    <div class="col-span-3">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Назва категорії</label>
+                        <input type="text" id="cat-name" required placeholder="Наприклад: Спорт, Подорожі..." class="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Колір для графіків</label>
+                    <input type="color" id="cat-color" value="#6366f1" class="w-full h-11 p-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer">
+                </div>
+                <button type="submit" class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-2xl shadow-lg transition-all">
+                    Додати категорію
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. Модальне вікно підтвердження очищення даних -->
+    <div id="reset-confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
+            <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950 text-rose-600 flex items-center justify-center">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">Очистити всі дані?</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Усі транзакції та налаштування бюджету будуть видалені. Рекомендуємо спочатку зробити резервну копію у JSON.</p>
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button onclick="closeModal('reset-confirm-modal')" class="px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
+                    Скасувати
+                </button>
+                <button onclick="wipeAllData()" class="px-4 py-2.5 text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-xl">
+                    Так, очистити
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== СТАН ЗАСТОСУНКУ ТА КОНСТАНТИ ====================
+        const STORAGE_KEY = 'skarb_finance_data_v1';
+        const THEME_KEY = 'skarb_theme';
+
+        const DEFAULT_CATEGORIES = [
+            // Витрати
+            { id: 'cat_groceries', name: 'Продукти', type: 'expense', icon: '🛒', color: '#10b981' },
+            { id: 'cat_cafe', name: 'Кафе та ресторани', type: 'expense', icon: '☕', color: '#f59e0b' },
+            { id: 'cat_transport', name: 'Транспорт і пальне', type: 'expense', icon: '🚕', color: '#3b82f6' },
+            { id: 'cat_home', name: 'Житло та комуналка', type: 'expense', icon: '🏠', color: '#8b5cf6' },
+            { id: 'cat_health', name: 'Здоров’я та аптека', type: 'expense', icon: '💊', color: '#ef4444' },
+            { id: 'cat_entertainment', name: 'Розваги та підписки', type: 'expense', icon: '🎬', color: '#ec4899' },
+            { id: 'cat_clothes', name: 'Одяг та взуття', type: 'expense', icon: '👕', color: '#06b6d4' },
+            { id: 'cat_other_exp', name: 'Інші витрати', type: 'expense', icon: '📦', color: '#64748b' },
+            // Доходи
+            { id: 'cat_salary', name: 'Зарплата', type: 'income', icon: '💼', color: '#10b981' },
+            { id: 'cat_freelance', name: 'Фріланс та підробіток', type: 'income', icon: '💻', color: '#6366f1' },
+            { id: 'cat_gifts', name: 'Подарунки та кешбек', type: 'income', icon: '🎁', color: '#f59e0b' },
+            { id: 'cat_other_inc', name: 'Інші доходи', type: 'income', icon: '💰', color: '#14b8a6' }
+        ];
+
+        let state = {
+            accounts: [],
+            categories: [],
+            transactions: [],
+            monthlyBudget: 0,
+            isDemo: false
+        };
+
+        let selectedMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+        let cashflowChartInstance = null;
+        let donutChartInstance = null;
+
+        // ==================== ІНІЦІАЛІЗАЦІЯ ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            document.getElementById('global-month-picker').value = selectedMonth;
+            loadState();
+            renderAll();
+            lucide.createIcons();
+        });
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem(THEME_KEY);
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            const isDark = html.classList.contains('dark');
+            localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+            renderCharts(); // Оновлюємо кольори написів на графіках
+        }
+
+        // ==================== РОБОТА З LOCALSTORAGE ТА ДЕМО-ДАНИМИ ====================
+        function loadState() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    state = {
+                        accounts: parsed.accounts || [],
+                        categories: parsed.categories?.length ? parsed.categories : [...DEFAULT_CATEGORIES],
+                        transactions: parsed.transactions || [],
+                        monthlyBudget: Number(parsed.monthlyBudget) || 0,
+                        isDemo: Boolean(parsed.isDemo)
+                    };
+                    return;
+                } catch (e) {
+                    console.error('Помилка читання даних:', e);
+                }
+            }
+            // Перший запуск — завантажуємо демо-дані
+            loadDemoData(false);
+        }
+
+        function saveState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function loadDemoData(showNotification = true) {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const prevDate = new Date(y, now.getMonth() - 1, 15);
+            const py = prevDate.getFullYear();
+            const pm = String(prevDate.getMonth() + 1).padStart(2, '0');
+
+            state = {
+                isDemo: true,
+                monthlyBudget: 25000,
+                categories: [...DEFAULT_CATEGORIES],
+                accounts: [
+                    { id: 'acc_mono', name: 'Monobank Чорна', icon: '💳', balance: 28450 },
+                    { id: 'acc_privat', name: 'ПриватБанк', icon: '🏦', balance: 14200 },
+                    { id: 'acc_cash', name: 'Готівка (Гаманець)', icon: '💵', balance: 4850 },
+                    { id: 'acc_jar', name: 'Банка на мрію', icon: '🐷', balance: 35000 }
+                ],
+                transactions: [
+                    { id: 't1', type: 'income', amount: 42000, categoryId: 'cat_salary', accountId: 'acc_mono', date: `${y}-${m}-05`, note: 'Аванс та основна виплата' },
+                    { id: 't2', type: 'expense', amount: 2450, categoryId: 'cat_groceries', accountId: 'acc_mono', date: `${y}-${m}-06`, note: 'Закупка продуктів у Сільпо' },
+                    { id: 't3', type: 'expense', amount: 480, categoryId: 'cat_cafe', accountId: 'acc_mono', date: `${y}-${m}-08`, note: 'Обід з колегами' },
+                    { id: 't4', type: 'expense', amount: 3800, categoryId: 'cat_home', accountId: 'acc_privat', date: `${y}-${m}-10`, note: 'Комунальні послуги та інтернет' },
+                    { id: 't5', type: 'expense', amount: 1200, categoryId: 'cat_transport', accountId: 'acc_mono', date: `${y}-${m}-12`, note: 'Пальне на АЗС' },
+                    { id: 't6', type: 'income', amount: 6500, categoryId: 'cat_freelance', accountId: 'acc_privat', date: `${y}-${m}-14`, note: 'Дизайн лендінгу' },
+                    { id: 't7', type: 'expense', amount: 1850, categoryId: 'cat_groceries', accountId: 'acc_cash', date: `${y}-${m}-15`, note: 'Фермерський ринок, овочі та м’ясо' },
+                    { id: 't8', type: 'expense', amount: 950, categoryId: 'cat_health', accountId: 'acc_mono', date: `${y}-${m}-17`, note: 'Вітаміни в аптеці' },
+                    { id: 't9', type: 'expense', amount: 650, categoryId: 'cat_entertainment', accountId: 'acc_mono', date: `${y}-${m}-19`, note: 'Кінотеатр та попкорн' },
+                    // Попередній місяць для графіка
+                    { id: 't10', type: 'income', amount: 39000, categoryId: 'cat_salary', accountId: 'acc_mono', date: `${py}-${pm}-05`, note: 'Зарплата за минулий місяць' },
+                    { id: 't11', type: 'expense', amount: 19500, categoryId: 'cat_groceries', accountId: 'acc_mono', date: `${py}-${pm}-18`, note: 'Витрати минулого місяця' }
+                ]
+            };
+            saveState();
+            renderAll();
+            if (showNotification) showToast('Демонстраційні дані завантажено', 'success');
+        }
+
+        function clearDemoData() {
+            state.transactions = [];
+            state.accounts = [
+                { id: 'acc_cash_' + Date.now(), name: 'Готівка', icon: '💵', balance: 0 },
+                { id: 'acc_card_' + (Date.now() + 1), name: 'Основна картка', icon: '💳', balance: 0 }
+            ];
+            state.monthlyBudget = 0;
+            state.isDemo = false;
+            saveState();
+            renderAll();
+            showToast('Демо-дані очищено! Можете починати власний облік.', 'info');
+        }
+
+        function wipeAllData() {
+            closeModal('reset-confirm-modal');
+            clearDemoData();
+        }
+
+        // ==================== НАВІГАЦІЯ ТА ФОРМАТУВАННЯ ====================
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+            const titles = {
+                dashboard: 'Огляд та аналітика',
+                transactions: 'Історія операцій',
+                accounts: 'Рахунки та гаманці',
+                budget: 'Бюджет і категорії',
+                settings: 'Дані та резервні копії'
+            };
+            document.getElementById('page-title').textContent = titles[tabName] || 'Скарб';
+
+            // Активний стиль десктопного меню
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.dataset.tab === tabName) {
+                    btn.className = 'nav-btn w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl transition-all bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400';
+                } else {
+                    btn.className = 'nav-btn w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-all';
+                }
+            });
+
+            // Активний стиль мобільного меню
+            document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+                if (btn.dataset.tab === tabName) {
+                    btn.classList.add('text-brand-600', 'dark:text-brand-400');
+                    btn.classList.remove('text-slate-500', 'dark:text-slate-400');
+                } else {
+                    btn.classList.remove('text-brand-600', 'dark:text-brand-400');
+                    btn.classList.add('text-slate-500', 'dark:text-slate-400');
+                }
+            });
+
+            if (tabName === 'dashboard') renderCharts();
+        }
+
+        function handleMonthChange(val) {
+            if (!val) return;
+            selectedMonth = val;
+            renderAll();
+        }
+
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('uk-UA', {
+                minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+                maximumFractionDigits: 2
+            }).format(amount) + ' ₴';
+        }
+
+        function formatDateUA(dateStr) {
+            const [y, m, d] = dateStr.split('-');
+            const months = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
+            return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`;
+        }
+
+        function getMonthTitleUA(ym) {
+            const [y, m] = ym.split('-');
+            const months = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+            return `${months[parseInt(m) - 1]} ${y} р.`;
+        }
+
+        // ==================== РЕНДЕРИНГ УСЬОГО ІНТЕРФЕЙСУ ====================
+        function renderAll() {
+            document.getElementById('current-month-display').textContent = getMonthTitleUA(selectedMonth);
+            document.getElementById('demo-banner').classList.toggle('hidden', !state.isDemo);
+
+            renderKPIs();
+            renderAccounts();
+            renderTransactions();
+            renderBudgetAndCategories();
+            renderCharts();
+            populateSelectOptions();
+            lucide.createIcons();
+        }
+
+        function renderKPIs() {
+            const totalBalance = state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+            document.getElementById('kpi-total-balance').textContent = formatMoney(totalBalance);
+            document.getElementById('kpi-accounts-count').textContent = `На ${state.accounts.length} рахунках`;
+
+            const monthTxs = state.transactions.filter(t => t.date.startsWith(selectedMonth));
+            const monthIncome = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+            const monthExpense = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+            const diff = monthIncome - monthExpense;
+
+            document.getElementById('kpi-month-income').textContent = '+' + formatMoney(monthIncome);
+            document.getElementById('kpi-month-expense').textContent = '-' + formatMoney(monthExpense);
+            document.getElementById('kpi-month-savings').textContent = `Баланс місяця: ${diff >= 0 ? '+' : ''}${formatMoney(diff)}`;
+
+            // Бюджет
+            const budget = Number(state.monthlyBudget) || 0;
+            document.getElementById('kpi-budget-spent').textContent = formatMoney(monthExpense);
+            document.getElementById('kpi-budget-limit').textContent = budget > 0 ? `з ${formatMoney(budget)}` : 'без ліміту';
+
+            const bar = document.getElementById('kpi-budget-bar');
+            const status = document.getElementById('kpi-budget-status');
+            if (budget > 0) {
+                const pct = Math.min(100, Math.round((monthExpense / budget) * 100));
+                bar.style.width = `${pct}%`;
+                bar.className = `h-full rounded-full transition-all duration-500 ${
+                    pct >= 100 ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
+                }`;
+                const left = budget - monthExpense;
+                status.textContent = left >= 0
+                    ? `Використано ${pct}% • Залишилось ${formatMoney(left)}`
+                    : `Перевищено на ${formatMoney(Math.abs(left))}!`;
+            } else {
+                bar.style.width = '0%';
+                status.textContent = 'Натисніть «Налаштувати», щоб задати ліміт';
+            }
+        }
+
+        function renderAccounts() {
+            // Міні-картки на дашборді
+            const dashList = document.getElementById('dashboard-accounts-list');
+            dashList.innerHTML = state.accounts.map(acc => `
+                <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between shadow-sm">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="text-2xl shrink-0">${acc.icon}</span>
+                        <div class="truncate">
+                            <p class="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">${acc.name}</p>
+                            <p class="text-base font-bold text-slate-900 dark:text-white">${formatMoney(acc.balance)}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Повна сітка на вкладці "Рахунки"
+            const grid = document.getElementById('accounts-grid');
+            grid.innerHTML = state.accounts.map(acc => `
+                <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between gap-4">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl">
+                                ${acc.icon}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 dark:text-white">${acc.name}</h4>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">Активний рахунок</span>
+                            </div>
+                        </div>
+                        ${state.accounts.length > 1 ? `
+                            <button onclick="deleteAccount('${acc.id}')" title="Видалити рахунок" class="p-2 text-slate-400 hover:text-rose-500 rounded-xl transition-colors">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-baseline justify-between">
+                        <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Поточний залишок</span>
+                        <span class="text-2xl font-extrabold text-slate-900 dark:text-white">${formatMoney(acc.balance)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTransactionItem(tx) {
+            const acc = state.accounts.find(a => a.id === tx.accountId);
+            const accName = acc ? acc.name : 'Видалений рахунок';
+
+            if (tx.type === 'transfer') {
+                const toAcc = state.accounts.find(a => a.id === tx.toAccountId);
+                const toAccName = toAcc ? toAcc.name : 'Рахунок';
+                return `
+                    <div class="p-4 flex items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                        <div class="flex items-center gap-3.5 min-w-0">
+                            <div class="w-11 h-11 rounded-2xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center text-lg shrink-0">
+                                🔄
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-bold text-slate-900 dark:text-white truncate">Переказ: ${accName} → ${toAccName}</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">${formatDateUA(tx.date)}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span class="text-sm sm:text-base font-bold text-slate-700 dark:text-slate-300">${formatMoney(tx.amount)}</span>
+                            <button onclick="deleteTransaction('${tx.id}')" title="Видалити" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg transition-colors">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const cat = state.categories.find(c => c.id === tx.categoryId) || { name: 'Без категорії', icon: '📌', color: '#64748b' };
+            const isIncome = tx.type === 'income';
+
+            return `
+                <div class="p-4 flex items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0" style="background-color: ${cat.color}18;">
+                            ${cat.icon}
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <p class="text-sm font-bold text-slate-900 dark:text-white truncate">${cat.name}</p>
+                                <span class="hidden sm:inline-block text-[11px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">${accName}</span>
+                            </div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                ${formatDateUA(tx.date)} ${tx.note ? `• ${tx.note}` : ''}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <span class="text-sm sm:text-base font-extrabold ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}">
+                            ${isIncome ? '+' : '-'}${formatMoney(tx.amount)}
+                        </span>
+                        <button onclick="deleteTransaction('${tx.id}')" title="Видалити" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTransactions() {
+            const sorted = [...state.transactions].sort((a, b) => b.date.localeCompare(a.date));
+
+            // Останні 5 операцій для дашборду
+            const recentEl = document.getElementById('recent-transactions-list');
+            if (sorted.length === 0) {
+                recentEl.innerHTML = `<div class="py-10 text-center text-sm text-slate-400">Операцій ще немає. Натисніть «Додати операцію», щоб зробити перший запис!</div>`;
+            } else {
+                recentEl.innerHTML = sorted.slice(0, 6).map(renderTransactionItem).join('');
+            }
+
+            // Фільтрований список для вкладки "Історія"
+            const search = document.getElementById('filter-search').value.toLowerCase().trim();
+            const typeFilter = document.getElementById('filter-type').value;
+            const catFilter = document.getElementById('filter-category').value;
+            const accFilter = document.getElementById('filter-account').value;
+            const onlyMonth = document.getElementById('filter-only-selected-month').checked;
+
+            const filtered = sorted.filter(tx => {
+                if (onlyMonth && !tx.date.startsWith(selectedMonth)) return false;
+                if (typeFilter !== 'all' && tx.type !== typeFilter) return false;
+                if (catFilter !== 'all' && tx.categoryId !== catFilter) return false;
+                if (accFilter !== 'all' && tx.accountId !== accFilter && tx.toAccountId !== accFilter) return false;
+                if (search) {
+                    const cat = state.categories.find(c => c.id === tx.categoryId);
+                    const catName = cat ? cat.name.toLowerCase() : '';
+                    const note = (tx.note || '').toLowerCase();
+                    if (!catName.includes(search) && !note.includes(search)) return false;
+                }
+                return true;
+            });
+
+            document.getElementById('transactions-count-label').textContent = `Знайдено операцій: ${filtered.length}`;
+            const allListEl = document.getElementById('all-transactions-list');
+            if (filtered.length === 0) {
+                allListEl.innerHTML = `<div class="py-12 text-center text-sm text-slate-400">За вашим запитом операцій не знайдено</div>`;
+            } else {
+                allListEl.innerHTML = filtered.map(renderTransactionItem).join('');
+            }
+            lucide.createIcons();
+        }
+
+        function renderBudgetAndCategories() {
+            document.getElementById('monthly-budget-input').value = state.monthlyBudget || '';
+
+            const monthExpense = state.transactions
+                .filter(t => t.type === 'expense' && t.date.startsWith(selectedMonth))
+                .reduce((s, t) => s + Number(t.amount), 0);
+
+            const budgetBox = document.getElementById('budget-detail-box');
+            const budget = Number(state.monthlyBudget) || 0;
+
+            if (budget > 0) {
+                const pct = Math.round((monthExpense / budget) * 100);
+                const clampedPct = Math.min(100, pct);
+                const left = budget - monthExpense;
+                const barColor = pct >= 100 ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500';
+
+                budgetBox.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                            <span class="font-semibold text-slate-700 dark:text-slate-300">Витрачено у ${getMonthTitleUA(selectedMonth)}: <strong>${formatMoney(monthExpense)}</strong></span>
+                            <span class="font-bold ${left < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400'}">
+                                ${left >= 0 ? `Залишок: ${formatMoney(left)}` : `Перевищення: ${formatMoney(Math.abs(left))}`} (${pct}%)
+                            </span>
+                        </div>
+                        <div class="w-full h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full ${barColor} rounded-full transition-all duration-500" style="width: ${clampedPct}%"></div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                budgetBox.innerHTML = `<p class="text-sm text-slate-500 dark:text-slate-400">Ліміт витрат наразі не встановлено. Введіть суму вище та натисніть «Зберегти».</p>`;
+            }
+
+            // Список категорій
+            const expList = document.getElementById('expense-categories-list');
+            const incList = document.getElementById('income-categories-list');
+
+            const renderCatRow = (cat) => `
+                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                    <div class="flex items-center gap-3">
+                        <span class="w-9 h-9 rounded-xl flex items-center justify-center text-lg" style="background-color: ${cat.color}22;">${cat.icon}</span>
+                        <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">${cat.name}</span>
+                    </div>
+                    <button onclick="deleteCategory('${cat.id}')" title="Видалити категорію" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `;
+
+            expList.innerHTML = state.categories.filter(c => c.type === 'expense').map(renderCatRow).join('');
+            incList.innerHTML = state.categories.filter(c => c.type === 'income').map(renderCatRow).join('');
+        }
+
+        // ==================== ГРАФІКИ (CHART.JS) ====================
+        function renderCharts() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+            const gridColor = isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(100, 116, 139, 0.1)';
+
+            // 1. Графік динаміки за останні 6 місяців
+            const labels = [];
+            const incomeData = [];
+            const expenseData = [];
+
+            const [selY, selM] = selectedMonth.split('-').map(Number);
+            const shortMonths = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
+
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(selY, selM - 1 - i, 1);
+                const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                labels.push(`${shortMonths[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`);
+
+                const mTxs = state.transactions.filter(t => t.date.startsWith(ym));
+                incomeData.push(mTxs.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0));
+                expenseData.push(mTxs.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0));
+            }
+
+            const ctxBar = document.getElementById('cashflowChart').getContext('2d');
+            if (cashflowChartInstance) cashflowChartInstance.destroy();
+
+            cashflowChartInstance = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Доходи',
+                            data: incomeData,
+                            backgroundColor: '#10b981',
+                            borderRadius: 6,
+                            barPercentage: 0.65
+                        },
+                        {
+                            label: 'Витрати',
+                            data: expenseData,
+                            backgroundColor: '#f43f5e',
+                            borderRadius: 6,
+                            barPercentage: 0.65
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: textColor, font: { family: 'Inter', weight: '600' }, usePointStyle: true }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: textColor } },
+                        y: { grid: { color: gridColor }, ticks: { color: textColor } }
+                    }
+                }
+            });
+
+            // 2. Кільцева діаграма витрат за обраний місяць
+            const monthExpenses = state.transactions.filter(t => t.type === 'expense' && t.date.startsWith(selectedMonth));
+            const grouped = {};
+            monthExpenses.forEach(tx => {
+                grouped[tx.categoryId] = (grouped[tx.categoryId] || 0) + Number(tx.amount);
+            });
+
+            const sortedCats = Object.entries(grouped)
+                .map(([catId, amount]) => {
+                    const cat = state.categories.find(c => c.id === catId) || { name: 'Інше', icon: '📦', color: '#64748b' };
+                    return { ...cat, amount };
+                })
+                .sort((a, b) => b.amount - a.amount);
+
+            const emptyDonut = document.getElementById('donut-empty-state');
+            const legendBox = document.getElementById('donut-legend');
+            const ctxDonut = document.getElementById('expensesDonutChart').getContext('2d');
+
+            if (donutChartInstance) donutChartInstance.destroy();
+
+            if (sortedCats.length === 0) {
+                emptyDonut.classList.remove('hidden');
+                legendBox.innerHTML = '';
+            } else {
+                emptyDonut.classList.add('hidden');
+                const totalExp = sortedCats.reduce((s, c) => s + c.amount, 0);
+
+                donutChartInstance = new Chart(ctxDonut, {
+                    type: 'doughnut',
+                    data: {
+                        labels: sortedCats.map(c => c.name),
+                        datasets: [{
+                            data: sortedCats.map(c => c.amount),
+                            backgroundColor: sortedCats.map(c => c.color),
+                            borderWidth: isDark ? 2 : 2,
+                            borderColor: isDark ? '#0f172a' : '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '68%',
+                        plugins: { legend: { display: false } }
+                    }
+                });
+
+                legendBox.innerHTML = sortedCats.map(c => {
+                    const pct = Math.round((c.amount / totalExp) * 100);
+                    return `
+                        <div class="flex items-center justify-between text-xs py-1">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${c.color}"></span>
+                                <span class="truncate font-medium text-slate-700 dark:text-slate-300">${c.icon} ${c.name}</span>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span class="text-slate-400">${pct}%</span>
+                                <span class="font-bold text-slate-900 dark:text-white">${formatMoney(c.amount)}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // ==================== ОПЕРАЦІЇ З ДАНИМИ (CRUD) ====================
+        function populateSelectOptions() {
+            const txType = document.getElementById('tx-type').value;
+            const filteredCats = state.categories.filter(c => c.type === txType);
+
+            document.getElementById('tx-category').innerHTML = filteredCats
+                .map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+
+            const accOptions = state.accounts
+                .map(a => `<option value="${a.id}">${a.icon} ${a.name} (${formatMoney(a.balance)})</option>`).join('');
+
+            document.getElementById('tx-account').innerHTML = accOptions;
+            document.getElementById('transfer-from').innerHTML = accOptions;
+            document.getElementById('transfer-to').innerHTML = accOptions;
+
+            // Фільтри
+            document.getElementById('filter-category').innerHTML = '<option value="all">Усі категорії</option>' +
+                state.categories.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+
+            document.getElementById('filter-account').innerHTML = '<option value="all">Усі рахунки</option>' +
+                state.accounts.map(a => `<option value="${a.id}">${a.icon} ${a.name}</option>`).join('');
+        }
+
+        function setTxType(type) {
+            document.getElementById('tx-type').value = type;
+            const expBtn = document.getElementById('tx-type-expense');
+            const incBtn = document.getElementById('tx-type-income');
+
+            if (type === 'expense') {
+                expBtn.className = 'py-2.5 text-sm font-bold rounded-xl bg-white dark:bg-slate-900 text-rose-600 shadow-sm transition-all';
+                incBtn.className = 'py-2.5 text-sm font-semibold rounded-xl text-slate-600 dark:text-slate-400 transition-all';
+            } else {
+                incBtn.className = 'py-2.5 text-sm font-bold rounded-xl bg-white dark:bg-slate-900 text-emerald-600 shadow-sm transition-all';
+                expBtn.className = 'py-2.5 text-sm font-semibold rounded-xl text-slate-600 dark:text-slate-400 transition-all';
+            }
+            populateSelectOptions();
+        }
+
+        function handleAddTransaction(e) {
+            e.preventDefault();
+            const type = document.getElementById('tx-type').value;
+            const amount = parseFloat(document.getElementById('tx-amount').value);
+            const categoryId = document.getElementById('tx-category').value;
+            const accountId = document.getElementById('tx-account').value;
+            const date = document.getElementById('tx-date').value;
+            const note = document.getElementById('tx-note').value.trim();
+
+            if (!amount || amount <= 0) return;
+
+            const acc = state.accounts.find(a => a.id === accountId);
+            if (acc) {
+                acc.balance = type === 'income'
+                    ? Number(acc.balance) + amount
+                    : Number(acc.balance) - amount;
+            }
+
+            state.transactions.push({
+                id: 'tx_' + Date.now(),
+                type,
+                amount,
+                categoryId,
+                accountId,
+                date,
+                note
+            });
+
+            saveState();
+            closeModal('transaction-modal');
+            e.target.reset();
+            renderAll();
+            showToast(type === 'income' ? 'Дохід успішно додано!' : 'Витрату записано!', 'success');
+        }
+
+        function deleteTransaction(id) {
+            const idx = state.transactions.findIndex(t => t.id === id);
+            if (idx === -1) return;
+            const tx = state.transactions[idx];
+
+            // Повертаємо баланс рахунку
+            const acc = state.accounts.find(a => a.id === tx.accountId);
+            if (tx.type === 'transfer') {
+                const toAcc = state.accounts.find(a => a.id === tx.toAccountId);
+                if (acc) acc.balance = Number(acc.balance) + Number(tx.amount);
+                if (toAcc) toAcc.balance = Number(toAcc.balance) - Number(tx.amount);
+            } else if (acc) {
+                acc.balance = tx.type === 'income'
+                    ? Number(acc.balance) - Number(tx.amount)
+                    : Number(acc.balance) + Number(tx.amount);
+            }
+
+            state.transactions.splice(idx, 1);
+            saveState();
+            renderAll();
+            showToast('Операцію видалено, баланс оновлено', 'info');
+        }
+
+        function handleTransfer(e) {
+            e.preventDefault();
+            const fromId = document.getElementById('transfer-from').value;
+            const toId = document.getElementById('transfer-to').value;
+            const amount = parseFloat(document.getElementById('transfer-amount').value);
+            const date = document.getElementById('transfer-date').value;
+
+            if (fromId === toId) {
+                showToast('Оберіть різні рахунки для переказу', 'error');
+                return;
+            }
+
+            const fromAcc = state.accounts.find(a => a.id === fromId);
+            const toAcc = state.accounts.find(a => a.id === toId);
+            if (!fromAcc || !toAcc || amount <= 0) return;
+
+            fromAcc.balance = Number(fromAcc.balance) - amount;
+            toAcc.balance = Number(toAcc.balance) + amount;
+
+            state.transactions.push({
+                id: 'tr_' + Date.now(),
+                type: 'transfer',
+                amount,
+                accountId: fromId,
+                toAccountId: toId,
+                date,
+                note: ''
+            });
+
+            saveState();
+            closeModal('transfer-modal');
+            e.target.reset();
+            renderAll();
+            showToast('Переказ між рахунками виконано!', 'success');
+        }
+
+        function handleAddAccount(e) {
+            e.preventDefault();
+            const name = document.getElementById('acc-name').value.trim();
+            const balance = parseFloat(document.getElementById('acc-balance').value) || 0;
+            const icon = document.getElementById('acc-icon').value;
+
+            state.accounts.push({
+                id: 'acc_' + Date.now(),
+                name,
+                balance,
+                icon
+            });
+
+            saveState();
+            closeModal('account-modal');
+            e.target.reset();
+            renderAll();
+            showToast(`Рахунок «${name}» додано!`, 'success');
+        }
+
+        function deleteAccount(id) {
+            if (state.accounts.length <= 1) {
+                showToast('Повинен залишатися хоча б один рахунок', 'error');
+                return;
+            }
+            state.accounts = state.accounts.filter(a => a.id !== id);
+            saveState();
+            renderAll();
+            showToast('Рахунок видалено', 'info');
+        }
+
+        function handleAddCategory(e) {
+            e.preventDefault();
+            const type = document.getElementById('cat-type').value;
+            const icon = document.getElementById('cat-icon').value.trim() || '📌';
+            const name = document.getElementById('cat-name').value.trim();
+            const color = document.getElementById('cat-color').value;
+
+            state.categories.push({
+                id: 'cat_' + Date.now(),
+                type,
+                icon,
+                name,
+                color
+            });
+
+            saveState();
+            closeModal('category-modal');
+            e.target.reset();
+            renderAll();
+            showToast(`Категорію «${name}» створено!`, 'success');
+        }
+
+        function deleteCategory(id) {
+            state.categories = state.categories.filter(c => c.id !== id);
+            saveState();
+            renderAll();
+            showToast('Категорію видалено', 'info');
+        }
+
+        function saveMonthlyBudget(e) {
+            e.preventDefault();
+            const val = parseFloat(document.getElementById('monthly-budget-input').value) || 0;
+            state.monthlyBudget = Math.max(0, val);
+            saveState();
+            renderAll();
+            showToast('Місячний ліміт бюджету збережено!', 'success');
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-search').value = '';
+            document.getElementById('filter-type').value = 'all';
+            document.getElementById('filter-category').value = 'all';
+            document.getElementById('filter-account').value = 'all';
+            document.getElementById('filter-only-selected-month').checked = false;
+            renderTransactions();
+        }
+
+        // ==================== ЕКСПОРТ / ІМПОРТ JSON ====================
+        function exportDataJSON() {
+            const dataStr = JSON.stringify(state, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `skarb-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Резервну копію успішно завантажено!', 'success');
+        }
+
+        function importDataJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (!Array.isArray(imported.accounts) || !Array.isArray(imported.transactions)) {
+                        throw new Error('Некоректний формат файлу');
+                    }
+                    state = {
+                        accounts: imported.accounts,
+                        categories: imported.categories || [...DEFAULT_CATEGORIES],
+                        transactions: imported.transactions,
+                        monthlyBudget: Number(imported.monthlyBudget) || 0,
+                        isDemo: false
+                    };
+                    saveState();
+                    renderAll();
+                    showToast('Дані успішно відновлено з резервної копії!', 'success');
+                } catch (err) {
+                    showToast('Помилка: некоректний JSON-файл', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // ==================== МОДАЛЬНІ ВІКНА ТА СПОВІЩЕННЯ ====================
+        function openTransactionModal() {
+            setTxType('expense');
+            document.getElementById('tx-date').value = new Date().toISOString().slice(0, 10);
+            openModal('transaction-modal');
+            setTimeout(() => document.getElementById('tx-amount').focus(), 100);
+        }
+
+        function openTransferModal() {
+            populateSelectOptions();
+            if (state.accounts.length > 1) {
+                document.getElementById('transfer-to').selectedIndex = 1;
+            }
+            document.getElementById('transfer-date').value = new Date().toISOString().slice(0, 10);
+            openModal('transfer-modal');
+        }
+
+        function openAccountModal() {
+            openModal('account-modal');
+        }
+
+        function openCategoryModal() {
+            openModal('category-modal');
+        }
+
+        function openResetConfirmModal() {
+            openModal('reset-confirm-modal');
+        }
+
+        function openModal(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        }
+
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            el.classList.add('hidden');
+            el.classList.remove('flex');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const colors = {
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-rose-600 text-white',
+                info: 'bg-slate-800 text-white dark:bg-slate-700'
+            };
+            const toast = document.createElement('div');
+            toast.className = `${colors[type] || colors.info} px-4 py-3 rounded-2xl shadow-xl text-sm font-semibold flex items-center justify-between gap-3 pointer-events-auto transition-all duration-300 transform translate-y-0 opacity-100`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
